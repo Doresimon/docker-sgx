@@ -1,36 +1,36 @@
-FROM tozd/runit:ubuntu-bionic
+# docker build . -f ./ubuntu-bionic.dockerfile -t u18
+# docker run -it -v /Users/guanjixing/Desktop/git/github/Doresimon:/home/halo u18 
+# docker run -dit -v /Users/guanjixing/Desktop/git/github/Doresimon:/home/halo u18 
+# docker exec -it test /bin/bash
 
-COPY ./patches /patches
 
-RUN apt-get update -q -q && \
- apt-get install wget python git patch build-essential ocaml automake autoconf libtool libssl-dev libcurl4-openssl-dev protobuf-compiler protobuf-c-compiler libprotobuf-dev libprotobuf-c0-dev alien uuid-dev libxml2-dev cmake pkg-config systemd ocamlbuild --yes --force-yes && \
- mkdir -p /tmp/icls && \
- cd /tmp/icls && \
- wget http://registrationcenter-download.intel.com/akdlm/irc_nas/11414/iclsClient-1.45.449.12-1.x86_64.rpm && \
- alien --scripts iclsClient-1.45.449.12-1.x86_64.rpm && \
- dpkg -i iclsclient_1.45.449.12-2_amd64.deb && \
- rm -rf /tmp/icls && \
- cd /tmp && \
- git clone https://github.com/01org/dynamic-application-loader-host-interface.git && \
- cd /tmp/dynamic-application-loader-host-interface && \
- cmake . && \
- make && \
- make install && \
- rm -rf /tmp/dynamic-application-loader-host-interface && \
- cd /tmp && \
- git clone -b sgx_2.1.3 https://github.com/01org/linux-sgx.git && \
- cd / && \
- for patch in /patches/*; do patch --prefix=/patches/ -p0 --force "--input=$patch" || exit 1; done && \
- rm -rf /patches && \
- cd /tmp/linux-sgx && \
- ./download_prebuilt.sh && \
- make && \
- make sdk_install_pkg && \
- make psw_install_pkg && \
- mkdir -p /opt/intel && \
- cd /opt/intel && \
- yes yes | /tmp/linux-sgx/linux/installer/bin/sgx_linux_x64_sdk_*.bin && \
- /tmp/linux-sgx/linux/installer/bin/sgx_linux_x64_psw_*.bin && \
- rm -rf /tmp/linux-sgx
+FROM tozd/sgx:ubuntu-bionic
 
-COPY ./etc /etc
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+
+RUN apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
+    && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+ENV LANG en_US.utf8
+
+RUN mkdir /home/halo
+
+WORKDIR /home/halo
+
+RUN source /opt/intel/sgxsdk/environment
+
+ENV SGX_MODE SIM
+ENV SGX_SDK /opt/intel/sgxsdk
+ENV PATH $PATH:$SGX_SDK/bin:$SGX_SDK/bin/x64
+ENV PKG_CONFIG_PATH $PKG_CONFIG_PATH:$SGX_SDK/pkgconfig
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$SGX_SDK/sdk_libs
+
+# export SGX_SDK=/opt/intel/sgxsdk
+# export PATH=$PATH:$SGX_SDK/bin:$SGX_SDK/bin/x64
+# export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$SGX_SDK/pkgconfig
+# if [ -z "$LD_LIBRARY_PATH" ]; then
+# export LD_LIBRARY_PATH=$SGX_SDK/sdk_libs
+# else
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$SGX_SDK/sdk_libs
+# fi
+
+ENTRYPOINT [ "/bin/bash" ]

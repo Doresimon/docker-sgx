@@ -7,6 +7,7 @@ host and you have to provide it to the container when you run it:
 
 ```
 docker run -d --device /dev/isgx --device /dev/mei0 --name test-sgx tozd/sgx:ubuntu-xenial
+docker run -d --name test-sgx tozd/sgx:ubuntu-xenial
 docker exec -t -i test-sgx bash
 ```
 
